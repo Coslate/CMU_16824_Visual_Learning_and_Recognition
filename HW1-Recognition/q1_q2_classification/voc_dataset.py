@@ -64,6 +64,7 @@ class VOCDataset(Dataset):
             # https://docs.python.org/3/library/xml.etree.elementtree.html)
             # Loop through the `tree` to find all objects in the image
             #######################################################################
+            root = tree.getroot()
 
             #  The class vector should be a 20-dimensional vector with class[i] = 1 if an object of class i is present in the image and 0 otherwise
             class_vec = torch.zeros(20)
@@ -71,6 +72,18 @@ class VOCDataset(Dataset):
             # The weight vector should be a 20-dimensional vector with weight[i] = 0 iff an object of class i has the `difficult` attribute set to 1 in the XML file and 1 otherwise
             # The difficult attribute specifies whether a class is ambiguous and by setting its weight to zero it does not contribute to the loss during training 
             weight_vec = torch.ones(20)
+
+            # mark present classes; zero weight if ANY instance of that class is "difficult"
+            for obj in root.findall('object'):
+                name = obj.find('name').text.lower().strip()
+                if name not in self.INV_CLASS:    # just in case
+                    continue
+                ci = self.INV_CLASS[name]
+                class_vec[ci] = 1.0
+                diff_tag = obj.find('difficult')
+                is_diff = (diff_tag is not None and diff_tag.text.strip() == '1')
+                if is_diff:
+                    weight_vec[ci] = 0.0            
 
             ######################################################################
             #                            END OF YOUR CODE                        #
@@ -92,7 +105,37 @@ class VOCDataset(Dataset):
         # change and you will have to write the correct value of `flat_dim`
         # in line 46 in simple_cnn.py
         ######################################################################
-        pass
+        # toggle all augs
+        use_aug = os.environ.get("AUG", "1") != "0"
+        # toggle rotation only
+        use_rot = os.environ.get("ROT", "0") != "0"     # default OFF
+        rot_deg = float(os.environ.get("ROT_DEG", "10"))
+        is_train = self.split in ("train", "trainval")
+
+        if not is_train or not use_aug:
+            return [transforms.CenterCrop(self.size)]
+
+        augs = [
+            transforms.RandomResizedCrop(self.size, scale=(0.6, 1.0)),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.05),
+        ]
+
+        if use_rot:
+            # avoid black wedges; fill with dataset mean color (PIL expects 0–255)
+            mean255 = (int(0.485 * 255), int(0.457 * 255), int(0.407 * 255))
+            augs.insert(
+                0,
+                transforms.RandomApply([    
+                    transforms.RandomRotation(
+                        degrees=rot_deg,
+                        interpolation=transforms.InterpolationMode.BILINEAR,
+                        expand=True,
+                        fill=mean255
+                    )
+                ], p=0.5),
+            )
+        return augs
         ######################################################################
         #                            END OF YOUR CODE                        #
         ######################################################################
@@ -111,7 +154,7 @@ class VOCDataset(Dataset):
         img = Image.open(fpath)
 
         trans = transforms.Compose([
-            transforms.Resize(self.size),
+            transforms.Resize(self.size), #preserve the aspect ratio of the input images
             *self.get_random_augmentations(),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.457, 0.407], std=[0.229, 0.224, 0.225]),

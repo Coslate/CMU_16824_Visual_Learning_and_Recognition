@@ -5,6 +5,7 @@ import numpy as np
 from torch.utils.tensorboard import SummaryWriter
 import utils
 from voc_dataset import VOCDataset
+import os
 
 
 def save_this_epoch(args, epoch):
@@ -23,7 +24,9 @@ def save_model(epoch, model_name, model):
 
 
 def train(args, model, optimizer, scheduler=None, model_name='model'):
-    writer = SummaryWriter()
+    EXP_NAME = os.environ.get("EXP_NAME", "EXP_RUN")
+    writer = SummaryWriter(log_dir=f"runs/{EXP_NAME}")
+    print(f"Logging to : {writer.log_dir}")
     train_loader = utils.get_data_loader(
         'voc', train=True, batch_size=args.batch_size, split='trainval', inp_size=args.inp_size)
     test_loader = utils.get_data_loader(
@@ -53,7 +56,13 @@ def train(args, model, optimizer, scheduler=None, model_name='model'):
             # Function Outputs:
             #   - `output`: Computed loss, a single floating point number
             ##################################################################
-            loss = 0
+            z = output
+            y = target.to(output.dtype)
+            w = wgt.to(output.dtype)
+            max_z = torch.clamp(z, min=0)
+            sp    = max_z + torch.log1p(torch.exp(-torch.abs(z)))
+            loss_entry = sp - y*z
+            loss = (loss_entry * w).sum() / w.sum().clamp_min(1.0)
             ##################################################################
             #                          END OF YOUR CODE                      #
             ##################################################################
