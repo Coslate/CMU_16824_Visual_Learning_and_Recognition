@@ -56,11 +56,10 @@ def train(args, model, optimizer, scheduler=None, model_name='model'):
             # Function Outputs:
             #   - `output`: Computed loss, a single floating point number
             ##################################################################
-            z = output
-            y = target.to(output.dtype)
+            z = output #[B, C]
+            y = target.to(output.dtype) #[B, C]
             w = wgt.to(output.dtype)
-            max_z = torch.clamp(z, min=0)
-            sp    = max_z + torch.log1p(torch.exp(-torch.abs(z)))
+            sp    = z.clamp_min(0) + torch.log1p(torch.exp(-torch.abs(z))) #stable version of softplus(z) = log(1+exp(z))
             loss_entry = sp - y*z
             loss = (loss_entry * w).sum() / w.sum().clamp_min(1.0)
             ##################################################################
