@@ -19,12 +19,12 @@ if __name__ == "__main__":
     # You should get a map of around 22 in 5 epochs
     ##################################################################
     args = ARGS(
-        epochs=30, #was 5, 10, 20, 30
+        epochs=30, #was 5, 10, 20, 30, 50
         inp_size=64,
         use_cuda=True,
         val_every=70,
-        lr=1e-3,# TODO,
-        batch_size=64,#TODO,
+        lr=8e-4,# TODO,
+        batch_size=8,#TODO,
         step_size=3,#TODO,
         gamma=0.5,#TODO
         log_every=70,

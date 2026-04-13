@@ -1,10 +1,11 @@
 matplotlib
-numpy
-opencv-python
+numpy<2
+opencv-python-headless<4.13
 Pillow==9.4.0
+imageio
 scikit-learn
 tensorboard==2.11.2
-torch==2.3.0
-torchvision==0.18.0
+#torch==2.3.0
+#torchvision==0.18.0
 tqdm
 wget==3.2

@@ -17,10 +17,9 @@ def save_this_epoch(args, epoch):
 
 
 def save_model(epoch, model_name, model):
-    filename = 'checkpoint-{}-epoch{}.pth'.format(
-        model_name, epoch+1)
+    filename = 'checkpoint-{}-epoch{}.pth'.format(model_name, epoch+1)
     print("saving model at ", filename)
-    torch.save(model, filename)
+    torch.save(model.state_dict(), filename)    
 
 
 def train(args, model, optimizer, scheduler=None, model_name='model'):
@@ -31,6 +30,7 @@ def train(args, model, optimizer, scheduler=None, model_name='model'):
         'voc', train=True, batch_size=args.batch_size, split='trainval', inp_size=args.inp_size)
     test_loader = utils.get_data_loader(
         'voc', train=False, batch_size=args.test_batch_size, split='test', inp_size=args.inp_size)
+    test_loader = utils.get_data_loader('voc', train=False, batch_size=args.test_batch_size, split='test', inp_size=args.inp_size)
 
     # Ensure model is in correct mode and on right device
     model.train()
